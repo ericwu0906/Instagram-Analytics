@@ -25,6 +25,12 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def get_db_connection():
+    # Ensure data directory exists
+    try:
+        os.makedirs('data', exist_ok=True)
+    except (OSError, PermissionError):
+        pass  # Continue if we can't create directory
+    
     conn = sqlite3.connect(app.config['DATABASE'])
     conn.row_factory = sqlite3.Row
     return conn
@@ -551,122 +557,134 @@ def add_post():
     db.close()
     
     if request.method == 'POST':
-        # Get form data
-        project_id = request.form.get('project_id')
-        post_type = request.form['post_type']
-        post_date = request.form['post_date']
-        post_time = request.form['post_time']
-        caption = request.form.get('caption', '')
-        caption_category = request.form['caption_category']
-        dominant_color = request.form.get('dominant_color', '')
-        
-        # Metrics
-        likes = int(request.form['likes'])
-        comments = int(request.form['comments'])
-        shares = int(request.form['shares'])
-        saves = int(request.form['saves'])
-        reach = int(request.form['reach'])
-        followers_gained = int(request.form['followers_gained'])
-        
-        # Reel-specific data
-        reel_length = int(request.form['reel_length']) if request.form.get('reel_length') else None
-        watch_time = int(request.form['watch_time']) if request.form.get('watch_time') else None
-        avg_view_duration = float(request.form['avg_view_duration']) if request.form.get('avg_view_duration') else None
-        
-        # Handle file upload - skip in production/cloud environments
-        thumbnail_path = None
-        if 'thumbnail' in request.files:
-            file = request.files['thumbnail']
-            if file and file.filename != '' and allowed_file(file.filename):
-                # In cloud environment, just store the filename without actually saving
-                # This prevents filesystem errors on read-only systems like Railway
-                try:
-                    filename = secure_filename(file.filename)
-                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
-                    filename = timestamp + filename
-                    
-                    # Try to create upload directory if it doesn't exist
-                    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                    file.save(file_path)
-                    thumbnail_path = filename
-                except (OSError, PermissionError):
-                    # If file saving fails (read-only filesystem), continue without thumbnail
-                    thumbnail_path = None
-                    flash('Note: File uploads are disabled in this environment. Post saved without thumbnail.', 'info')
-        
-        # Use selected project or create default
-        db = get_db_connection()
-        
-        if not project_id:
-            # Get or create default project
-            project = db.execute(
-                'SELECT id FROM projects WHERE user_id = ? LIMIT 1', 
-                (session['user_id'],)
-            ).fetchone()
+        try:
+            # Get form data
+            project_id = request.form.get('project_id')
+            post_type = request.form['post_type']
+            post_date = request.form['post_date']
+            post_time = request.form['post_time']
+            caption = request.form.get('caption', '')
+            caption_category = request.form['caption_category']
+            dominant_color = request.form.get('dominant_color', '')
             
-            if not project:
-                # Create default project
-                db.execute(
-                    'INSERT INTO projects (user_id, project_name, description) VALUES (?, ?, ?)',
-                    (session['user_id'], f"{session['username']}'s Instagram", "Default project")
-                )
-                db.commit()
+            # Metrics
+            likes = int(request.form['likes'])
+            comments = int(request.form['comments'])
+            shares = int(request.form['shares'])
+            saves = int(request.form['saves'])
+            reach = int(request.form['reach'])
+            followers_gained = int(request.form['followers_gained'])
+            
+            # Reel-specific data
+            reel_length = int(request.form['reel_length']) if request.form.get('reel_length') else None
+            watch_time = int(request.form['watch_time']) if request.form.get('watch_time') else None
+            avg_view_duration = float(request.form['avg_view_duration']) if request.form.get('avg_view_duration') else None
+            
+            # Handle file upload - skip in production/cloud environments
+            thumbnail_path = None
+            if 'thumbnail' in request.files:
+                file = request.files['thumbnail']
+                if file and file.filename != '' and allowed_file(file.filename):
+                    # In cloud environment, just store the filename without actually saving
+                    # This prevents filesystem errors on read-only systems like Railway
+                    try:
+                        filename = secure_filename(file.filename)
+                        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
+                        filename = timestamp + filename
+                        
+                        # Try to create upload directory if it doesn't exist
+                        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+                        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        file.save(file_path)
+                        thumbnail_path = filename
+                    except (OSError, PermissionError):
+                        # If file saving fails (read-only filesystem), continue without thumbnail
+                        thumbnail_path = None
+                        flash('Note: File uploads are disabled in this environment. Post saved without thumbnail.', 'info')
+            
+            # Use selected project or create default
+            db = get_db_connection()
+            
+            if not project_id:
+                # Get or create default project
                 project = db.execute(
                     'SELECT id FROM projects WHERE user_id = ? LIMIT 1', 
                     (session['user_id'],)
                 ).fetchone()
+                
+                if not project:
+                    # Create default project
+                    db.execute(
+                        'INSERT INTO projects (user_id, project_name, description) VALUES (?, ?, ?)',
+                        (session['user_id'], f"{session['username']}'s Instagram", "Default project")
+                    )
+                    db.commit()
+                    project = db.execute(
+                        'SELECT id FROM projects WHERE user_id = ? LIMIT 1', 
+                        (session['user_id'],)
+                    ).fetchone()
+                
+                project_id = project['id']
+            else:
+                # Verify user owns the selected project
+                project = db.execute(
+                    'SELECT id FROM projects WHERE id = ? AND user_id = ?',
+                    (project_id, session['user_id'])
+                ).fetchone()
+                
+                if not project:
+                    flash('Invalid project selected')
+                    db.close()
+                    return redirect(url_for('add_post'))
+                
+                project_id = int(project_id)
             
-            project_id = project['id']
-        else:
-            # Verify user owns the selected project
-            project = db.execute(
-                'SELECT id FROM projects WHERE id = ? AND user_id = ?',
-                (project_id, session['user_id'])
-            ).fetchone()
+            # Calculate metrics
+            metrics = calculate_metrics(
+                likes, comments, shares, saves, reach, 
+                avg_view_duration, reel_length, followers_gained
+            )
             
-            if not project:
-                flash('Invalid project selected')
-                return redirect(url_for('add_post'))
-            
-            project_id = int(project_id)
-        
-        # Calculate metrics
-        metrics = calculate_metrics(
-            likes, comments, shares, saves, reach, 
-            avg_view_duration, reel_length, followers_gained
-        )
-        
-        # Insert post
-        db.execute('''
-            INSERT INTO posts (
+            # Insert post
+            db.execute('''
+                INSERT INTO posts (
+                    project_id, post_type, post_date, post_time, reel_length,
+                    thumbnail_path, caption, caption_category, likes, shares,
+                    comments, reach, saves, followers_gained, watch_time,
+                    avg_view_duration, engagement_rate, engagement_rate_weighted,
+                    avd_ratio, follower_gain_rate, performance_score, dominant_color
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
                 project_id, post_type, post_date, post_time, reel_length,
                 thumbnail_path, caption, caption_category, likes, shares,
                 comments, reach, saves, followers_gained, watch_time,
-                avg_view_duration, engagement_rate, engagement_rate_weighted,
-                avd_ratio, follower_gain_rate, performance_score, dominant_color
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            project_id, post_type, post_date, post_time, reel_length,
-            thumbnail_path, caption, caption_category, likes, shares,
-            comments, reach, saves, followers_gained, watch_time,
-            avg_view_duration, metrics['engagement_rate'], 
-            metrics['engagement_rate_weighted'], metrics['avd_ratio'],
-            metrics['follower_gain_rate'], metrics['performance_score'], 
-            dominant_color
-        ))
-        
-        # Get the ID of the newly inserted post
-        post_id = db.lastrowid
-        
-        # Extract and save hashtags
-        save_hashtags(post_id, caption, db)
-        
-        db.commit()
-        db.close()
-        
-        flash('Post added successfully!')
-        return redirect(url_for('posts'))
+                avg_view_duration, metrics['engagement_rate'], 
+                metrics['engagement_rate_weighted'], metrics['avd_ratio'],
+                metrics['follower_gain_rate'], metrics['performance_score'], 
+                dominant_color
+            ))
+            
+            # Get the ID of the newly inserted post
+            post_id = db.lastrowid
+            
+            # Extract and save hashtags
+            save_hashtags(post_id, caption, db)
+            
+            db.commit()
+            db.close()
+            
+            flash('Post added successfully!')
+            return redirect(url_for('posts'))
+            
+        except Exception as e:
+            # Log the error and show user-friendly message
+            print(f"Error adding post: {str(e)}")
+            flash(f'Error adding post: {str(e)}', 'error')
+            try:
+                db.close()
+            except:
+                pass
+            return render_template('add_post.html', projects=user_projects)
     
     return render_template('add_post.html', projects=user_projects)
 
