@@ -646,7 +646,7 @@ def add_post():
             )
             
             # Insert post
-            db.execute('''
+            cursor = db.execute('''
                 INSERT INTO posts (
                     project_id, post_type, post_date, post_time, reel_length,
                     thumbnail_path, caption, caption_category, likes, shares,
@@ -665,7 +665,7 @@ def add_post():
             ))
             
             # Get the ID of the newly inserted post
-            post_id = db.lastrowid
+            post_id = cursor.lastrowid
             
             # Extract and save hashtags
             save_hashtags(post_id, caption, db)
