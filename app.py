@@ -573,18 +573,27 @@ def add_post():
         watch_time = int(request.form['watch_time']) if request.form.get('watch_time') else None
         avg_view_duration = float(request.form['avg_view_duration']) if request.form.get('avg_view_duration') else None
         
-        # Handle file upload
+        # Handle file upload - skip in production/cloud environments
         thumbnail_path = None
         if 'thumbnail' in request.files:
             file = request.files['thumbnail']
             if file and file.filename != '' and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                # Add timestamp to filename to avoid conflicts
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
-                filename = timestamp + filename
-                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(file_path)
-                thumbnail_path = filename
+                # In cloud environment, just store the filename without actually saving
+                # This prevents filesystem errors on read-only systems like Railway
+                try:
+                    filename = secure_filename(file.filename)
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
+                    filename = timestamp + filename
+                    
+                    # Try to create upload directory if it doesn't exist
+                    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    file.save(file_path)
+                    thumbnail_path = filename
+                except (OSError, PermissionError):
+                    # If file saving fails (read-only filesystem), continue without thumbnail
+                    thumbnail_path = None
+                    flash('Note: File uploads are disabled in this environment. Post saved without thumbnail.', 'info')
         
         # Use selected project or create default
         db = get_db_connection()
@@ -1458,8 +1467,11 @@ def generate_project_report(project_id):
     return render_template('project_report.html', project=project, posts=posts, analytics=analytics)
 
 if __name__ == '__main__':
-    # Ensure upload directory exists
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    # Try to ensure upload directory exists (skip if read-only filesystem)
+    try:
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    except (OSError, PermissionError):
+        print("Warning: Cannot create upload directory (read-only filesystem)")
     
     # Initialize database
     init_db()
