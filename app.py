@@ -736,264 +736,65 @@ def reports():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
-    # Get analytics data for charts
-    db = get_db_connection()
+    try:
+        # Get analytics data for charts
+        db = get_db_connection()
+        
+        # Get user's project IDs
+        projects = db.execute(
+            'SELECT id FROM projects WHERE user_id = ?', 
+            (session['user_id'],)
+        ).fetchall()
+        
+        analytics_data = {
+            'engagement_over_time': [],
+            'reach_over_time': [],
+            'posting_time_analysis': [],
+            'caption_category_performance': [],
+            'performance_distribution': [],
+            'hashtag_performance': [],
+            'content_insights': [],
+            'day_of_week_analysis': [],
+            'monthly_trends': [],
+            'engagement_velocity': []
+        }
+        
+        if projects:
+            project_ids = [str(p['id']) for p in projects]
+            project_ids_str = ','.join(project_ids)
+            
+            # Get all posts for this user to calculate metrics
+            all_posts = db.execute('''
+                SELECT * FROM posts p
+                JOIN projects pr ON p.project_id = pr.id
+                WHERE pr.user_id = ?
+                ORDER BY post_date DESC
+            ''', (session['user_id'],)).fetchall()
+            
+            # Use calculate_metrics function for safety
+            if all_posts:
+                metrics = calculate_metrics(all_posts)
+                analytics_data.update(metrics)
     
-    # Get user's project IDs
-    projects = db.execute(
-        'SELECT id FROM projects WHERE user_id = ?', 
-        (session['user_id'],)
-    ).fetchall()
-    
-    analytics_data = {
-        'engagement_over_time': [],
-        'reach_over_time': [],
-        'posting_time_analysis': [],
-        'caption_category_performance': [],
-        'performance_distribution': [],
-        'hashtag_performance': [],
-        'content_insights': [],
-        'day_of_week_analysis': [],
-        'monthly_trends': [],
-        'engagement_velocity': []
-    }
-    
-    if projects:
-        project_ids = [str(p['id']) for p in projects]
-        project_ids_str = ','.join(project_ids)
+        db.close()
         
-        # Engagement and reach over time (last 30 posts)
-        time_data = db.execute(f'''
-            SELECT post_date, AVG(engagement_rate) as avg_engagement, SUM(reach) as total_reach
-            FROM posts 
-            WHERE project_id IN ({project_ids_str})
-            GROUP BY post_date
-            ORDER BY post_date DESC
-            LIMIT 30
-        ''').fetchall()
+        return render_template('reports.html', analytics=analytics_data)
         
-        analytics_data['engagement_over_time'] = [
-            {'date': row['post_date'], 'engagement': round(row['avg_engagement'], 2)}
-            for row in reversed(time_data)
-        ]
-        
-        analytics_data['reach_over_time'] = [
-            {'date': row['post_date'], 'reach': row['total_reach']}
-            for row in reversed(time_data)
-        ]
-        
-        # Posting time analysis
-        posting_time_data = db.execute(f'''
-            SELECT 
-                CAST(substr(post_time, 1, 2) AS INTEGER) as hour,
-                AVG(engagement_rate_weighted) as avg_engagement,
-                COUNT(*) as post_count
-            FROM posts 
-            WHERE project_id IN ({project_ids_str})
-            GROUP BY hour
-            ORDER BY hour
-        ''').fetchall()
-        
-        analytics_data['posting_time_analysis'] = [
-            {
-                'hour': row['hour'], 
-                'engagement': round(row['avg_engagement'], 2),
-                'count': row['post_count']
-            }
-            for row in posting_time_data
-        ]
-        
-        # Caption category performance
-        category_data = db.execute(f'''
-            SELECT 
-                caption_category,
-                AVG(performance_score) as avg_score,
-                COUNT(*) as post_count
-            FROM posts 
-            WHERE project_id IN ({project_ids_str})
-            AND caption_category IS NOT NULL
-            AND caption_category != ''
-            GROUP BY caption_category
-            ORDER BY avg_score DESC
-        ''').fetchall()
-        
-        analytics_data['caption_category_performance'] = [
-            {
-                'category': row['caption_category'], 
-                'score': round(row['avg_score'], 1),
-                'count': row['post_count']
-            }
-            for row in category_data
-        ]
-        
-        # Performance score distribution
-        perf_data = db.execute(f'''
-            SELECT 
-                CASE 
-                    WHEN performance_score < 10 THEN '0-10'
-                    WHEN performance_score < 20 THEN '10-20'
-                    WHEN performance_score < 30 THEN '20-30'
-                    WHEN performance_score < 40 THEN '30-40'
-                    WHEN performance_score < 50 THEN '40-50'
-                    ELSE '50+'
-                END as score_range,
-                COUNT(*) as count
-            FROM posts 
-            WHERE project_id IN ({project_ids_str})
-            GROUP BY score_range
-            ORDER BY count DESC
-        ''').fetchall()
-        
-        analytics_data['performance_distribution'] = [
-            {'range': row['score_range'], 'count': row['count']}
-            for row in perf_data
-        ]
-        
-        # Hashtag performance analysis
-        hashtag_data = db.execute(f'''
-            SELECT 
-                h.hashtag,
-                AVG(p.performance_score) as avg_score,
-                COUNT(*) as usage_count,
-                AVG(p.engagement_rate_weighted) as avg_engagement
-            FROM hashtags h
-            JOIN posts p ON h.post_id = p.id
-            WHERE p.project_id IN ({project_ids_str})
-            GROUP BY h.hashtag
-            HAVING usage_count >= 2
-            ORDER BY avg_score DESC
-            LIMIT 15
-        ''').fetchall()
-        
-        analytics_data['hashtag_performance'] = [
-            {
-                'hashtag': row['hashtag'],
-                'score': round(row['avg_score'], 1),
-                'count': row['usage_count'],
-                'engagement': round(row['avg_engagement'], 2)
-            }
-            for row in hashtag_data
-        ]
-        
-        # Content type insights
-        content_insights = db.execute(f'''
-            SELECT 
-                post_type,
-                AVG(performance_score) as avg_score,
-                AVG(engagement_rate) as avg_engagement,
-                AVG(reach) as avg_reach,
-                COUNT(*) as post_count
-            FROM posts 
-            WHERE project_id IN ({project_ids_str})
-            GROUP BY post_type
-            ORDER BY avg_score DESC
-        ''').fetchall()
-        
-        analytics_data['content_insights'] = [
-            {
-                'type': row['post_type'],
-                'score': round(row['avg_score'], 1),
-                'engagement': round(row['avg_engagement'], 2),
-                'reach': int(row['avg_reach']),
-                'count': row['post_count']
-            }
-            for row in content_insights
-        ]
-        
-        # Day of week analysis
-        day_of_week_data = db.execute(f'''
-            SELECT 
-                CASE CAST(strftime('%w', post_date) AS INTEGER)
-                    WHEN 0 THEN 'Sunday'
-                    WHEN 1 THEN 'Monday'
-                    WHEN 2 THEN 'Tuesday'
-                    WHEN 3 THEN 'Wednesday'
-                    WHEN 4 THEN 'Thursday'
-                    WHEN 5 THEN 'Friday'
-                    WHEN 6 THEN 'Saturday'
-                END as day_name,
-                CAST(strftime('%w', post_date) AS INTEGER) as day_num,
-                AVG(engagement_rate_weighted) as avg_engagement,
-                AVG(performance_score) as avg_score,
-                COUNT(*) as post_count
-            FROM posts 
-            WHERE project_id IN ({project_ids_str})
-            GROUP BY day_num
-            ORDER BY day_num
-        ''').fetchall()
-        
-        analytics_data['day_of_week_analysis'] = [
-            {
-                'day': row['day_name'],
-                'engagement': round(row['avg_engagement'], 2),
-                'score': round(row['avg_score'], 1),
-                'count': row['post_count']
-            }
-            for row in day_of_week_data
-        ]
-        
-        # Monthly trends
-        monthly_data = db.execute(f'''
-            SELECT 
-                strftime('%Y-%m', post_date) as month,
-                AVG(engagement_rate_weighted) as avg_engagement,
-                AVG(performance_score) as avg_score,
-                COUNT(*) as post_count,
-                SUM(followers_gained) as total_followers
-            FROM posts 
-            WHERE project_id IN ({project_ids_str})
-            GROUP BY month
-            ORDER BY month DESC
-            LIMIT 12
-        ''').fetchall()
-        
-        analytics_data['monthly_trends'] = [
-            {
-                'month': row['month'],
-                'engagement': round(row['avg_engagement'], 2),
-                'score': round(row['avg_score'], 1),
-                'count': row['post_count'],
-                'followers': row['total_followers']
-            }
-            for row in reversed(monthly_data)
-        ]
-        
-        # Engagement velocity (posts gaining traction quickly)
-        velocity_data = db.execute(f'''
-            SELECT 
-                id, caption, post_date, post_type,
-                engagement_rate_weighted,
-                performance_score,
-                (engagement_rate_weighted * reach / 1000) as velocity_score
-            FROM posts 
-            WHERE project_id IN ({project_ids_str})
-            AND engagement_rate_weighted > 0
-            ORDER BY velocity_score DESC
-            LIMIT 10
-        ''').fetchall()
-        
-        analytics_data['engagement_velocity'] = [
-            {
-                'id': row['id'],
-                'caption': row['caption'][:50] + '...' if row['caption'] and len(row['caption']) > 50 else row['caption'],
-                'date': row['post_date'],
-                'type': row['post_type'],
-                'engagement': round(row['engagement_rate_weighted'], 2),
-                'score': round(row['performance_score'], 1),
-                'velocity': round(row['velocity_score'], 1)
-            }
-            for row in velocity_data
-        ]
-        
-        # Growth trends analysis
-        analytics_data['growth_trends'] = analyze_growth_trends(project_ids_str, db)
-        
-        # Smart recommendations
-        analytics_data['recommendations'] = generate_smart_recommendations(project_ids_str, db)
-    
-    db.close()
-    
-    return render_template('reports.html', analytics=analytics_data)
+    except Exception as e:
+        print(f"Error generating reports: {str(e)}")
+        flash(f'Error generating reports: {str(e)}', 'error')
+        return render_template('reports.html', analytics={
+            'engagement_over_time': [],
+            'reach_over_time': [],
+            'posting_time_analysis': [],
+            'caption_category_performance': [],
+            'performance_distribution': [],
+            'hashtag_performance': [],
+            'content_insights': [],
+            'day_of_week_analysis': [],
+            'monthly_trends': [],
+            'engagement_velocity': []
+        })
 
 # API endpoints for chart data
 @app.route('/api/engagement-data')
