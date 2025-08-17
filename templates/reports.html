@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - Instagram Analytics{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0">
+    <!-- Page Header -->
+    <div class="border-b border-gray-200 pb-4 mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Analytics Reports</h1>
+        <p class="mt-1 text-sm text-gray-600">Detailed insights and performance analytics for your Instagram posts.</p>
+    </div>
+
+    {% if analytics.engagement_over_time %}
+    <!-- Charts Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Engagement Over Time -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Engagement Rate Over Time</h3>
+            <canvas id="engagementChart" width="400" height="200"></canvas>
+        </div>
+
+        <!-- Reach Over Time -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Reach Over Time</h3>
+            <canvas id="reachChart" width="400" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- Performance Distribution & Posting Time -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Performance Score Distribution -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Performance Score Distribution</h3>
+            <canvas id="performanceChart" width="400" height="200"></canvas>
+        </div>
+
+        <!-- Best Posting Time -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Posting Time Analysis</h3>
+            <canvas id="postingTimeChart" width="400" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- Caption Category Performance -->
+    <div class="bg-white p-6 rounded-lg shadow mb-8">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Caption Category Performance</h3>
+        <canvas id="categoryChart" width="800" height="300"></canvas>
+    </div>
+
+    <!-- Hashtag Performance & Content Insights -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Top Hashtags -->
+        {% if analytics.hashtag_performance %}
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Top Performing Hashtags</h3>
+            <div class="space-y-3">
+                {% for hashtag in analytics.hashtag_performance[:10] %}
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                    <div>
+                        <span class="font-medium text-instagram-pink">#{{ hashtag.hashtag }}</span>
+                        <span class="text-xs text-gray-500 ml-2">({{ hashtag.count }} posts)</span>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-medium">{{ hashtag.score }} score</div>
+                        <div class="text-xs text-gray-500">{{ hashtag.engagement }}% engagement</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Content Type Performance -->
+        {% if analytics.content_insights %}
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Content Type Performance</h3>
+            <div class="space-y-3">
+                {% for content in analytics.content_insights %}
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                    <div>
+                        <span class="font-medium">{{ content.type }}</span>
+                        <span class="text-xs text-gray-500 ml-2">({{ content.count }} posts)</span>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-medium">{{ content.score }} score</div>
+                        <div class="text-xs text-gray-500">{{ content.engagement }}% engagement</div>
+                        <div class="text-xs text-gray-500">{{ "{:,}".format(content.reach) }} avg reach</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Advanced Analytics -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Day of Week Analysis -->
+        {% if analytics.day_of_week_analysis %}
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Best Days to Post</h3>
+            <div class="space-y-2">
+                {% for day in analytics.day_of_week_analysis | sort(attribute='engagement', reverse=true) %}
+                <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+                    <span class="font-medium">{{ day.day }}</span>
+                    <div class="text-right">
+                        <div class="text-sm font-medium">{{ day.engagement }}% engagement</div>
+                        <div class="text-xs text-gray-500">{{ day.count }} posts</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Monthly Trends -->
+        {% if analytics.monthly_trends %}
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Monthly Growth Trends</h3>
+            {% if analytics.growth_trends %}
+            <div class="mb-4 p-3 {% if analytics.growth_trends.trend == 'improving' %}bg-green-50 text-green-800{% elif analytics.growth_trends.trend == 'declining' %}bg-red-50 text-red-800{% else %}bg-yellow-50 text-yellow-800{% endif %} rounded">
+                <div class="font-medium">
+                    {% if analytics.growth_trends.trend == 'improving' %}📈 Improving Performance
+                    {% elif analytics.growth_trends.trend == 'declining' %}📉 Declining Performance
+                    {% else %}📊 Stable Performance
+                    {% endif %}
+                </div>
+                <div class="text-sm mt-1">
+                    Score: {{ analytics.growth_trends.score_growth }}% | Engagement: {{ analytics.growth_trends.engagement_growth }}%
+                </div>
+            </div>
+            {% endif %}
+            <div class="space-y-2">
+                {% for month in analytics.monthly_trends[-6:] %}
+                <div class="flex items-center justify-between text-sm">
+                    <span>{{ month.month }}</span>
+                    <div class="flex space-x-4">
+                        <span>{{ month.score }} score</span>
+                        <span>{{ month.followers }} followers</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Top Performing Posts -->
+    {% if analytics.engagement_velocity %}
+    <div class="bg-white p-6 rounded-lg shadow mb-8">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">🚀 Viral Posts (Engagement Velocity)</h3>
+        <div class="space-y-3">
+            {% for post in analytics.engagement_velocity[:5] %}
+            <div class="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded">
+                <div>
+                    <span class="font-medium">{{ post.type }}</span>
+                    <span class="text-sm text-gray-600 ml-2">{{ post.caption }}</span>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm font-medium">🔥 {{ post.velocity }} velocity</div>
+                    <div class="text-xs text-gray-500">{{ post.engagement }}% engagement</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Smart Recommendations -->
+    {% if analytics.recommendations %}
+    <div class="bg-white p-6 rounded-lg shadow mb-8">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">🎯 Smart Recommendations</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for rec in analytics.recommendations %}
+            <div class="p-4 {% if rec.priority == 'high' %}bg-red-50 border-l-4 border-red-500{% elif rec.priority == 'medium' %}bg-yellow-50 border-l-4 border-yellow-500{% else %}bg-green-50 border-l-4 border-green-500{% endif %} rounded">
+                <h4 class="font-medium text-gray-900">{{ rec.title }}</h4>
+                <p class="text-sm text-gray-600 mt-1">{{ rec.description }}</p>
+                <span class="inline-block mt-2 px-2 py-1 text-xs rounded {% if rec.priority == 'high' %}bg-red-100 text-red-800{% elif rec.priority == 'medium' %}bg-yellow-100 text-yellow-800{% else %}bg-green-100 text-green-800{% endif %}">
+                    {{ rec.priority | title }} Priority
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Key Insights -->
+    <div class="bg-white p-6 rounded-lg shadow">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Key Insights</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Best Posting Time -->
+            <div class="border-l-4 border-instagram-pink pl-4">
+                <h4 class="font-medium text-gray-900">Best Posting Time</h4>
+                {% if analytics.posting_time_analysis %}
+                {% set best_time = analytics.posting_time_analysis | sort(attribute='engagement', reverse=true) | first %}
+                <p class="text-sm text-gray-600">{{ best_time.hour }}:00 ({{ "%.1f"|format(best_time.engagement) }}% avg engagement)</p>
+                <p class="text-xs text-gray-500">Based on {{ best_time.count }} posts</p>
+                {% else %}
+                <p class="text-sm text-gray-600">No data available</p>
+                {% endif %}
+            </div>
+
+            <!-- Best Caption Category -->
+            <div class="border-l-4 border-instagram-purple pl-4">
+                <h4 class="font-medium text-gray-900">Top Content Category</h4>
+                {% if analytics.caption_category_performance %}
+                {% set best_category = analytics.caption_category_performance | first %}
+                <p class="text-sm text-gray-600">{{ best_category.category }} ({{ "%.1f"|format(best_category.score) }} avg score)</p>
+                <p class="text-xs text-gray-500">Based on {{ best_category.count }} posts</p>
+                {% else %}
+                <p class="text-sm text-gray-600">No data available</p>
+                {% endif %}
+            </div>
+
+            <!-- Growth Trend -->
+            <div class="border-l-4 border-instagram-orange pl-4">
+                <h4 class="font-medium text-gray-900">Growth Trend</h4>
+                {% if analytics.growth_trends and analytics.growth_trends.trend != 'insufficient_data' %}
+                <p class="text-sm text-gray-600">
+                    {% if analytics.growth_trends.trend == 'improving' %}📈 Improving
+                    {% elif analytics.growth_trends.trend == 'declining' %}📉 Declining  
+                    {% else %}📊 Stable
+                    {% endif %}
+                    ({{ analytics.growth_trends.score_growth }}%)
+                </p>
+                <p class="text-xs text-gray-500">Month-over-month performance</p>
+                {% else %}
+                <p class="text-sm text-gray-600">Need more data for trend analysis</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-12">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No data for reports</h3>
+        <p class="mt-1 text-sm text-gray-500">Add some posts to see analytics and insights.</p>
+        <div class="mt-6">
+            <a href="{{ url_for('add_post') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gradient-to-r from-instagram-pink to-instagram-purple hover:from-instagram-purple hover:to-instagram-pink">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Add your first post
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if analytics.engagement_over_time %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Instagram color palette
+    const colors = {
+        pink: '#E4405F',
+        purple: '#833AB4',
+        orange: '#F56040',
+        yellow: '#FCCC63',
+        blue: '#405DE6'
+    };
+
+    // Engagement Over Time Chart
+    const engagementCtx = document.getElementById('engagementChart').getContext('2d');
+    new Chart(engagementCtx, {
+        type: 'line',
+        data: {
+            labels: {{ analytics.engagement_over_time | map(attribute='date') | list | tojson }},
+            datasets: [{
+                label: 'Engagement Rate (%)',
+                data: {{ analytics.engagement_over_time | map(attribute='engagement') | list | tojson }},
+                borderColor: colors.pink,
+                backgroundColor: colors.pink + '20',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Engagement Rate (%)'
+                    }
+                }
+            }
+        }
+    });
+
+    // Reach Over Time Chart
+    const reachCtx = document.getElementById('reachChart').getContext('2d');
+    new Chart(reachCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ analytics.reach_over_time | map(attribute='date') | list | tojson }},
+            datasets: [{
+                label: 'Reach',
+                data: {{ analytics.reach_over_time | map(attribute='reach') | list | tojson }},
+                backgroundColor: colors.blue + '80',
+                borderColor: colors.blue,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Reach'
+                    }
+                }
+            }
+        }
+    });
+
+    // Performance Score Distribution Chart
+    const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+    new Chart(performanceCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ analytics.performance_distribution | map(attribute='range') | list | tojson }},
+            datasets: [{
+                data: {{ analytics.performance_distribution | map(attribute='count') | list | tojson }},
+                backgroundColor: [
+                    colors.pink + '80',
+                    colors.purple + '80',
+                    colors.orange + '80',
+                    colors.yellow + '80',
+                    colors.blue + '80',
+                    '#6B7280' + '80'
+                ],
+                borderColor: [
+                    colors.pink,
+                    colors.purple,
+                    colors.orange,
+                    colors.yellow,
+                    colors.blue,
+                    '#6B7280'
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Posting Time Analysis Chart
+    const postingTimeCtx = document.getElementById('postingTimeChart').getContext('2d');
+    new Chart(postingTimeCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ analytics.posting_time_analysis | map(attribute='hour') | list | tojson }},
+            datasets: [{
+                label: 'Engagement Rate (%)',
+                data: {{ analytics.posting_time_analysis | map(attribute='engagement') | list | tojson }},
+                backgroundColor: colors.purple + '80',
+                borderColor: colors.purple,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Hour of Day'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Avg Engagement Rate (%)'
+                    }
+                }
+            }
+        }
+    });
+
+    // Caption Category Performance Chart
+    const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+    new Chart(categoryCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ analytics.caption_category_performance | map(attribute='category') | list | tojson }},
+            datasets: [{
+                label: 'Performance Score',
+                data: {{ analytics.caption_category_performance | map(attribute='score') | list | tojson }},
+                backgroundColor: colors.orange + '80',
+                borderColor: colors.orange,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            indexAxis: 'y',
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Average Performance Score'
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

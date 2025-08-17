@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Instagram Analytics{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'instagram-pink': '#E4405F',
+                        'instagram-purple': '#833AB4',
+                        'instagram-orange': '#F56040',
+                        'instagram-yellow': '#FCCC63',
+                        'instagram-blue': '#405DE6'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    {% if session.user_id %}
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="{{ url_for('dashboard') }}" class="flex-shrink-0">
+                        <h1 class="text-xl font-bold bg-gradient-to-r from-instagram-pink to-instagram-purple bg-clip-text text-transparent">
+                            IG Analytics
+                        </h1>
+                    </a>
+                    <div class="hidden md:ml-6 md:flex md:space-x-8">
+                        <a href="{{ url_for('dashboard') }}" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                            Dashboard
+                        </a>
+                        <a href="{{ url_for('projects') }}" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                            Projects
+                        </a>
+                        <a href="{{ url_for('add_post') }}" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                            Add Post
+                        </a>
+                        <a href="{{ url_for('posts') }}" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                            Posts
+                        </a>
+                        <a href="{{ url_for('reports') }}" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                            Reports
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-700">Welcome, {{ session.username }}</span>
+                    <a href="{{ url_for('logout') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile menu -->
+        <div class="md:hidden">
+            <div class="pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="{{ url_for('dashboard') }}" class="text-gray-500 hover:text-gray-700 block px-3 py-2 text-base font-medium">Dashboard</a>
+                <a href="{{ url_for('projects') }}" class="text-gray-500 hover:text-gray-700 block px-3 py-2 text-base font-medium">Projects</a>
+                <a href="{{ url_for('add_post') }}" class="text-gray-500 hover:text-gray-700 block px-3 py-2 text-base font-medium">Add Post</a>
+                <a href="{{ url_for('posts') }}" class="text-gray-500 hover:text-gray-700 block px-3 py-2 text-base font-medium">Posts</a>
+                <a href="{{ url_for('reports') }}" class="text-gray-500 hover:text-gray-700 block px-3 py-2 text-base font-medium">Reports</a>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+                {% for message in messages %}
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+                        <span class="block sm:inline">{{ message }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="{% if session.user_id %}max-w-7xl mx-auto py-6 sm:px-6 lg:px-8{% else %}min-h-screen flex items-center justify-center{% endif %}">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-auto">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+            <p class="text-center text-sm text-gray-500">
+                Instagram Growth Analysis App &copy; 2024
+            </p>
+        </div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.project_name }} Posts - Instagram Analytics{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0">
+    <!-- Page Header -->
+    <div class="border-b border-gray-200 pb-4 mb-6">
+        <div class="flex items-center space-x-4">
+            <a href="{{ url_for('projects') }}" class="text-instagram-pink hover:text-instagram-purple">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </a>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">{{ project.project_name }}</h1>
+                <p class="mt-1 text-sm text-gray-600">{{ project.description or "Project posts and analytics" }}</p>
+            </div>
+        </div>
+        
+        <div class="mt-4 flex space-x-3">
+            <a href="{{ url_for('add_post') }}?project={{ project.id }}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-instagram-pink to-instagram-purple hover:from-instagram-purple hover:to-instagram-pink">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Add Post to Project
+            </a>
+            <button onclick="generateProjectReport({{ project.id }})" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Generate Report
+            </button>
+        </div>
+    </div>
+
+    {% if posts %}
+    <!-- Project Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white p-4 rounded-lg shadow">
+            <div class="text-sm font-medium text-gray-500">Total Posts</div>
+            <div class="text-2xl font-bold text-gray-900">{{ posts|length }}</div>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <div class="text-sm font-medium text-gray-500">Avg Performance</div>
+            <div class="text-2xl font-bold text-gray-900">
+                {% set avg_score = (posts|map(attribute='performance_score')|list|sum) / (posts|length) %}
+                {{ "%.1f"|format(avg_score) }}
+            </div>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <div class="text-sm font-medium text-gray-500">Total Reach</div>
+            <div class="text-2xl font-bold text-gray-900">
+                {{ "{:,}".format(posts|map(attribute='reach')|list|sum) }}
+            </div>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <div class="text-sm font-medium text-gray-500">Total Followers</div>
+            <div class="text-2xl font-bold text-gray-900">
+                {{ "{:,}".format(posts|map(attribute='followers_gained')|list|sum) }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Posts Table -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Project Posts</h3>
+                <div class="flex space-x-2">
+                    <button onclick="selectAll()" class="text-sm text-gray-600 hover:text-gray-900">Select All</button>
+                    <button onclick="deleteSelected()" class="text-sm text-red-600 hover:text-red-900" id="deleteBtn" style="display: none;">Delete Selected</button>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-2 py-3"><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()"></th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Post</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for post in posts %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-2 py-4">
+                                <input type="checkbox" class="post-checkbox" value="{{ post.id }}" onchange="updateDeleteButton()">
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    {% if post.thumbnail_path %}
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <img class="h-10 w-10 rounded object-cover" src="{{ url_for('static', filename='../uploads/thumbnails/' + post.thumbnail_path) }}" alt="Thumbnail">
+                                    </div>
+                                    {% else %}
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <div class="h-10 w-10 rounded bg-gray-200 flex items-center justify-center">
+                                            <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">
+                                            {{ post.caption[:30] }}{% if post.caption|length > 30 %}...{% endif %}
+                                        </div>
+                                        <div class="text-sm text-gray-500">{{ post.caption_category }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                                    {% if post.post_type == 'Reel' %}bg-purple-100 text-purple-800
+                                    {% elif post.post_type == 'Story' %}bg-yellow-100 text-yellow-800
+                                    {% elif post.post_type == 'Carousel' %}bg-blue-100 text-blue-800
+                                    {% else %}bg-green-100 text-green-800{% endif %}">
+                                    {{ post.post_type }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <div>{{ post.post_date }}</div>
+                                <div class="text-xs text-gray-500">{{ post.post_time }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="text-sm font-medium text-gray-900">{{ "%.1f"|format(post.performance_score) }}</div>
+                                    <div class="ml-2 flex-1 bg-gray-200 rounded-full h-2 w-16">
+                                        <div class="bg-gradient-to-r from-instagram-pink to-instagram-purple h-2 rounded-full" 
+                                             style="width: {{ (post.performance_score / 100 * 100)|round(1) }}%"></div>
+                                    </div>
+                                </div>
+                                <div class="text-xs text-gray-500">{{ "%.1f"|format(post.engagement_rate) }}% engagement</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <div class="flex space-x-2">
+                                    <a href="{{ url_for('post_comments', post_id=post.id) }}" class="text-instagram-pink hover:text-instagram-purple">Comments</a>
+                                    <button onclick="deletePost({{ post.id }})" class="text-red-600 hover:text-red-900">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-12">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No posts in this project</h3>
+        <p class="mt-1 text-sm text-gray-500">Get started by adding your first post to this project.</p>
+        <div class="mt-6">
+            <a href="{{ url_for('add_post') }}?project={{ project.id }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gradient-to-r from-instagram-pink to-instagram-purple hover:from-instagram-purple hover:to-instagram-pink">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Add your first post
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAllCheckbox');
+    const checkboxes = document.querySelectorAll('.post-checkbox');
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    updateDeleteButton();
+}
+
+function selectAll() {
+    const selectAll = document.getElementById('selectAllCheckbox');
+    selectAll.checked = true;
+    toggleSelectAll();
+}
+
+function updateDeleteButton() {
+    const checked = document.querySelectorAll('.post-checkbox:checked');
+    const deleteBtn = document.getElementById('deleteBtn');
+    deleteBtn.style.display = checked.length > 0 ? 'block' : 'none';
+}
+
+function deleteSelected() {
+    const checked = document.querySelectorAll('.post-checkbox:checked');
+    if (checked.length === 0) return;
+    
+    if (confirm(`Delete ${checked.length} selected posts? This cannot be undone.`)) {
+        const postIds = Array.from(checked).map(cb => cb.value);
+        fetch('/posts/delete-multiple', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({post_ids: postIds})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error deleting posts: ' + data.error);
+            }
+        });
+    }
+}
+
+function deletePost(postId) {
+    if (confirm('Delete this post? This cannot be undone.')) {
+        fetch(`/posts/${postId}/delete`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error deleting post: ' + data.error);
+            }
+        });
+    }
+}
+
+function generateProjectReport(projectId) {
+    window.open(`/projects/${projectId}/report`, '_blank');
+}
+</script>
+{% endblock %}

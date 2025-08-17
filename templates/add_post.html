@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Add Post - Instagram Analytics{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0">
+    <!-- Page Header -->
+    <div class="border-b border-gray-200 pb-4 mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Add New Post</h1>
+        <p class="mt-1 text-sm text-gray-600">Enter the details and metrics for your Instagram post.</p>
+    </div>
+
+    <div class="max-w-3xl mx-auto">
+        <form class="space-y-6" action="{{ url_for('add_post') }}" method="POST" enctype="multipart/form-data">
+            <!-- Basic Post Information -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Post Details</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="post_type" class="block text-sm font-medium text-gray-700">Post Type</label>
+                        <select id="post_type" name="post_type" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-instagram-pink focus:border-instagram-pink sm:text-sm">
+                            <option value="">Select post type</option>
+                            <option value="Reel">Reel</option>
+                            <option value="Story">Story</option>
+                            <option value="Carousel">Carousel</option>
+                            <option value="Single">Single Post</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="caption_category" class="block text-sm font-medium text-gray-700">Caption Category</label>
+                        <select id="caption_category" name="caption_category" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-instagram-pink focus:border-instagram-pink sm:text-sm">
+                            <option value="">Select category</option>
+                            <option value="Educational">Educational</option>
+                            <option value="Entertainment">Entertainment</option>
+                            <option value="Behind-the-scenes">Behind-the-scenes</option>
+                            <option value="Product showcase">Product showcase</option>
+                            <option value="Tips & tricks">Tips & tricks</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="post_date" class="block text-sm font-medium text-gray-700">Post Date</label>
+                        <input type="date" id="post_date" name="post_date" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-instagram-pink focus:border-instagram-pink sm:text-sm">
+                    </div>
+                    
+                    <div>
+                        <label for="post_time" class="block text-sm font-medium text-gray-700">Post Time</label>
+                        <input type="time" id="post_time" name="post_time" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-instagram-pink focus:border-instagram-pink sm:text-sm">
+                    </div>
+                    
+                    <div id="reel_length_div" style="display: none;">
+                        <label for="reel_length" class="block text-sm font-medium text-gray-700">Reel Length (seconds)</label>
+                        <input type="number" id="reel_length" name="reel_length" min="1" max="300" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-instagram-pink focus:border-instagram-pink sm:text-sm">
+                    </div>
+                    
+                    <div>
+                        <label for="dominant_color" class="block text-sm font-medium text-gray-700">Dominant Color</label>
+                        <select id="dominant_color" name="dominant_color" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-instagram-pink focus:border-instagram-pink sm:text-sm">
+                            <option value="">Select color style</option>
+                            <option value="Bright">Bright</option>
+                            <option value="Neutral">Neutral</option>
+                            <option value="Dark">Dark</option>
+                            <option value="Colorful">Colorful</option>
+                            <option value="Monochrome">Monochrome</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    <label for="thumbnail" class="block text-sm font-medium text-gray-700">Thumbnail</label>
+                    <input type="file" id="thumbnail" name="thumbnail" accept="image/*" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-instagram-pink focus:border-instagram-pink sm:text-sm">
+                    <p class="mt-1 text-xs text-gray-500">Upload a thumbnail image (PNG, JPG, JPEG, GIF, WEBP)</p>
+                </div>
+                
+                <div class="mt-6">
+                    <label for="caption" class="block text-sm font-medium text-gray-700">Caption</label>
+                    <textarea id="caption" name="caption" rows="4" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-instagram-pink focus:border-instagram-pink sm:text-sm" placeholder="Enter your post caption..."></textarea>
+                </div>
+            </div>
+
+            <!-- Post Metrics -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Post Metrics</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div>
+                        <label for="likes" class="block text-sm font-medium text-gray-700">Likes</label>
+                        <input type="number" id="likes" name="likes" min="0" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-instagram-pink focus:border-instagram-pink sm:text-sm">
+                    </div>
+                    
+                    <div>
+                        <label for="comments" class="block text-sm font-medium text-gray-700">Comments</label>
+                        <input type="number" id="comments" name="comments" min="0" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-instagram-pink focus:border-instagram-pink sm:text-sm">
+                    </div>
+                    
+                    <div>
+                        <label for="shares" class="block text-sm font-medium text-gray-700">Shares</label>
+                        <input type="number" id="shares" name="shares" min="0" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-instagram-pink focus:border-instagram-pink sm:text-sm">
+                    </div>
+                    
+                    <div>
+                        <label for="saves" class="block text-sm font-medium text-gray-700">Saves</label>
+                        <input type="number" id="saves" name="saves" min="0" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-instagram-pink focus:border-instagram-pink sm:text-sm">
+                    </div>
+                    
+                    <div>
+                        <label for="reach" class="block text-sm font-medium text-gray-700">Reach</label>
+                        <input type="number" id="reach" name="reach" min="1" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-instagram-pink focus:border-instagram-pink sm:text-sm">
+                    </div>
+                    
+                    <div>
+                        <label for="followers_gained" class="block text-sm font-medium text-gray-700">Followers Gained</label>
+                        <input type="number" id="followers_gained" name="followers_gained" min="0" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-instagram-pink focus:border-instagram-pink sm:text-sm">
+                    </div>
+                </div>
+                
+                <!-- Reel-specific metrics -->
+                <div id="reel_metrics" style="display: none;" class="mt-6 pt-6 border-t border-gray-200">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">Reel Metrics</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="watch_time" class="block text-sm font-medium text-gray-700">Total Watch Time (seconds)</label>
+                            <input type="number" id="watch_time" name="watch_time" min="0" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-instagram-pink focus:border-instagram-pink sm:text-sm">
+                        </div>
+                        
+                        <div>
+                            <label for="avg_view_duration" class="block text-sm font-medium text-gray-700">Average View Duration (seconds)</label>
+                            <input type="number" id="avg_view_duration" name="avg_view_duration" min="0" step="0.1" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-instagram-pink focus:border-instagram-pink sm:text-sm">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex justify-end space-x-3">
+                <a href="{{ url_for('dashboard') }}" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-instagram-pink">
+                    Cancel
+                </a>
+                <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-instagram-pink to-instagram-purple hover:from-instagram-purple hover:to-instagram-pink focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-instagram-pink">
+                    Add Post
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Show/hide reel-specific fields based on post type
+    document.getElementById('post_type').addEventListener('change', function() {
+        const reelLengthDiv = document.getElementById('reel_length_div');
+        const reelMetrics = document.getElementById('reel_metrics');
+        const reelLengthInput = document.getElementById('reel_length');
+        const watchTimeInput = document.getElementById('watch_time');
+        const avgViewDurationInput = document.getElementById('avg_view_duration');
+        
+        if (this.value === 'Reel') {
+            reelLengthDiv.style.display = 'block';
+            reelMetrics.style.display = 'block';
+            reelLengthInput.required = true;
+        } else {
+            reelLengthDiv.style.display = 'none';
+            reelMetrics.style.display = 'none';
+            reelLengthInput.required = false;
+            reelLengthInput.value = '';
+            watchTimeInput.value = '';
+            avgViewDurationInput.value = '';
+        }
+    });
+</script>
+{% endblock %}

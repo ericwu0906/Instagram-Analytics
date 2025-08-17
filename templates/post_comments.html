@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Post Comments - Instagram Analytics{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0">
+    <!-- Page Header -->
+    <div class="border-b border-gray-200 pb-4 mb-6">
+        <div class="flex items-center space-x-4">
+            <a href="{{ url_for('posts') }}" class="text-instagram-pink hover:text-instagram-purple">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </a>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Post Comments</h1>
+                <p class="mt-1 text-sm text-gray-600">{{ post.project_name }} • {{ post.post_date }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Post Preview -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <div class="flex items-start space-x-4">
+            {% if post.thumbnail_path %}
+            <img src="{{ url_for('static', filename='../uploads/thumbnails/' + post.thumbnail_path) }}" 
+                 alt="Post thumbnail" class="w-16 h-16 rounded object-cover">
+            {% else %}
+            <div class="w-16 h-16 bg-gray-200 rounded flex items-center justify-center">
+                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+            </div>
+            {% endif %}
+            
+            <div class="flex-1">
+                <div class="flex items-center space-x-2 mb-2">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                        {% if post.post_type == 'Reel' %}bg-purple-100 text-purple-800
+                        {% elif post.post_type == 'Story' %}bg-yellow-100 text-yellow-800
+                        {% elif post.post_type == 'Carousel' %}bg-blue-100 text-blue-800
+                        {% else %}bg-green-100 text-green-800{% endif %}">
+                        {{ post.post_type }}
+                    </span>
+                    <span class="text-sm text-gray-500">{{ post.caption_category }}</span>
+                </div>
+                
+                {% if post.caption %}
+                <p class="text-sm text-gray-700 mb-2">{{ post.caption[:200] }}{% if post.caption|length > 200 %}...{% endif %}</p>
+                {% endif %}
+                
+                <div class="flex items-center space-x-4 text-sm text-gray-500">
+                    <span>Performance Score: <strong>{{ "%.1f"|format(post.performance_score) }}</strong></span>
+                    <span>Engagement: <strong>{{ "%.1f"|format(post.engagement_rate) }}%</strong></span>
+                    <span>Reach: <strong>{{ "{:,}".format(post.reach) }}</strong></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Comment Form -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Add Comment</h3>
+        <form method="POST" class="space-y-4">
+            <div>
+                <label for="comment_text" class="block text-sm font-medium text-gray-700">Your Comment</label>
+                <textarea 
+                    id="comment_text" 
+                    name="comment_text" 
+                    rows="3" 
+                    required
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-instagram-pink focus:border-instagram-pink sm:text-sm"
+                    placeholder="Add your thoughts, analysis, or feedback about this post..."
+                ></textarea>
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-instagram-pink to-instagram-purple hover:from-instagram-purple hover:to-instagram-pink">
+                    Add Comment
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Comments List -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">
+                Comments ({{ comments|length }})
+            </h3>
+        </div>
+        
+        {% if comments %}
+        <div class="divide-y divide-gray-200">
+            {% for comment in comments %}
+            <div class="px-6 py-4">
+                <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-gradient-to-r from-instagram-pink to-instagram-purple rounded-full flex items-center justify-center">
+                            <span class="text-white text-sm font-medium">{{ comment.username[0].upper() }}</span>
+                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-2">
+                            <h4 class="text-sm font-medium text-gray-900">{{ comment.username }}</h4>
+                            <span class="text-xs text-gray-500">{{ comment.created_at[:16] }}</span>
+                        </div>
+                        <p class="mt-1 text-sm text-gray-700">{{ comment.comment_text }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="px-6 py-8 text-center">
+            <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.013 8.013 0 01-2.906-.533l-3.32 1.777a1 1 0 01-1.448-1.042l1.151-3.455A8 8 0 1121 12z"/>
+            </svg>
+            <p class="mt-2 text-sm text-gray-500">No comments yet. Be the first to add your thoughts!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
